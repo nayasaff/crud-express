@@ -1,7 +1,6 @@
-import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import itemsRouter from './routes/item';
+import { loadEnvFromParameterStore } from './config'; 
 
 const app = express();
 
@@ -18,31 +17,41 @@ app.get('/', (_req, res) => {
   `);
 });   
 
-app.use('/items', itemsRouter);
-
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-  
-const PORT = Number(process.env.PORT) || 4000;
+async function startServer() {
+  try {
+    // 1. Load parameters from AWS SSM into process.env before routes/db initialize
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+      await loadEnvFromParameterStore('/production/');
+ 
+
+    // 2. Import routes/controllers AFTER process.env is populated
+    const itemsRouter = (await import('./routes/item')).default;
+    app.use('/items', itemsRouter);
+
+    const PORT = Number(process.env.PORT) || 4000;
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 
 
 //Project Idea
 
-// Create two ec2 one to host database using docker one for server and connect server to database
-// Use ebs for data backup
-// Use owned vpc public subnet private subnet
-// Add auto sclaing group and load balancer
 // Migrate on premise database to rds
 // Look into rds back up
 // Look into Elastic beanstalk and reployment and backing server
 // Use cloud watch alarm in case termination or high cpu to send sns email
-// Terminate an ASG instance → confirm auto-replacement works (Use Ami)
-// Use ssm to store env
+// Use ssm to store env and add database to launch template
 // Use ci/cd
