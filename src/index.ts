@@ -1,6 +1,7 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { loadEnvFromParameterStore } from './config'; 
+import itemsRouter from './routes/item';
 
 const app = express();
 
@@ -17,33 +18,18 @@ app.get('/', (_req, res) => {
   `);
 });   
 
+app.use('/items', itemsRouter);
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-async function startServer() {
-  try {
-    // 1. Load parameters from AWS SSM into process.env before routes/db initialize
+  
+const PORT = Number(process.env.PORT) || 4000;
 
-      await loadEnvFromParameterStore('/production/');
- 
-
-    // 2. Import routes/controllers AFTER process.env is populated
-    const itemsRouter = (await import('./routes/item')).default;
-    app.use('/items', itemsRouter);
-
-    const PORT = Number(process.env.PORT) || 4000;
-
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  }
-}
-
-startServer();
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
 
 
 
